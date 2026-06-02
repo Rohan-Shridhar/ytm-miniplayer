@@ -2,7 +2,7 @@
 
 # Clean previous builds
 rm -rf dist
-mkdir -p dist/firefox dist/chrome dist/edge
+mkdir -p dist/firefox dist/chrome dist/edge dist/opera
 
 # --- BUILD FIREFOX ---
 cp -r src/* dist/firefox/
@@ -19,5 +19,11 @@ cd dist/chrome && zip -r ../ytm-mini-chrome.zip * -x "*.DS_Store" && cd ../..
 cp -r src/* dist/edge/
 cp manifest.chrome.json dist/edge/manifest.json
 cd dist/edge && zip -r ../ytm-mini-edge.zip * -x "*.DS_Store" && cd ../..
+
+# --- BUILD OPERA ---
+# Opera supports Chrome-compatible MV3 extensions, so it uses the same manifest.
+cp -r src/* dist/opera/
+cp manifest.chrome.json dist/opera/manifest.json
+cd dist/opera && zip -r ../ytm-mini-opera.zip * -x "*.DS_Store" && cd ../..
 
 echo "Build Complete! Check the /dist folder."

@@ -69,11 +69,12 @@ These instructions have been designed and tested for a clean local machine envir
    npm run build
    # Or run directly: bash build.sh
    ```
-   *This will create a `dist/` directory containing `chrome/`, `firefox/`, and `edge/` builds.*
+   *This will create a `dist/` directory containing `chrome/`, `firefox/`, `edge/`, and `opera/` builds.*
 
 4. **Load the extension manually into your browser:**
    * **For Chrome:** Navigate to `chrome://extensions/`, toggle on "Developer mode" in the top right, click "Load unpacked", and select the `dist/chrome/` folder.
    * **For Edge:** Navigate to `edge://extensions/`, toggle on "Developer mode", click "Load unpacked", and select `dist/edge/`.
+   * **For Opera:** Navigate to `opera://extensions/`, toggle on "Developer mode", click "Load unpacked", and select `dist/opera/`.
    * **For Firefox:** Navigate to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on", and select the `manifest.json` inside the `dist/firefox/` folder.
 
 ---
