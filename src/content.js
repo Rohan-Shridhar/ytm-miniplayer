@@ -1,11 +1,13 @@
 // content.js
 
 function injectMiniCSS() {
-    if (document.getElementById('ytm-mini-css')) return;
+    if (document.getElementById("ytm-mini-css")) {
+        return;
+    }
 
-    const style = document.createElement('style');
-    style.id = 'ytm-mini-css';
-    
+    const style = document.createElement("style");
+    style.id = "ytm-mini-css";
+
     style.innerHTML = `
         @media (max-width: 600px) {
             /* 1. Hide the default middle controls container to make room */
@@ -98,125 +100,187 @@ function injectMiniCSS() {
 // Drag and drop implementation
 let isDragging = false;
 let startX, startY, initialX, initialY;
+let originalParent = null;
+let originalSibling = null;
 
 function initDraggable(el) {
-    el.addEventListener('mousedown', dragStart);
-    el.addEventListener('touchstart', dragStart, { passive: false });
+    el.addEventListener("mousedown", dragStart);
+    el.addEventListener("touchstart", dragStart, { passive: false });
 
     function dragStart(e) {
-        if (e.target.closest('button')) return; // Don't drag if clicking buttons
-        
+        // Only allow left-clicks for mouse dragging
+        if (e.type === "mousedown" && e.button !== 0) {
+            return;
+        }
+        // Don't drag if clicking buttons, icons, or role="button" elements
+        if (
+            e.target.closest("button") ||
+            e.target.closest("tp-yt-paper-icon-button") ||
+            e.target.closest("yt-icon") ||
+            e.target.closest('[role="button"]')
+        ) {
+            return;
+        }
+
         isDragging = true;
-        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-        
+        const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
+
         startX = clientX;
         startY = clientY;
-        
-        const rect = el.getBoundingClientRect();
-        initialX = rect.left + rect.width / 2;
-        initialY = rect.top + rect.height / 2;
 
-        document.addEventListener('mousemove', dragMove);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('touchmove', dragMove, { passive: false });
-        document.addEventListener('touchend', dragEnd);
-        
-        el.style.transition = 'none';
+        const rect = el.getBoundingClientRect();
+        // Compensate for transform: translateX(-50%)
+        initialX = rect.left + rect.width / 2;
+        // No vertical translation, so rect.top matches style.top exactly
+        initialY = rect.top;
+
+        document.addEventListener("mousemove", dragMove);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("touchmove", dragMove, { passive: false });
+        document.addEventListener("touchend", dragEnd);
+        document.addEventListener("touchcancel", dragEnd);
+
+        el.style.transition = "none";
     }
 
     function dragMove(e) {
-        if (!isDragging) return;
+        if (!isDragging) {
+            return;
+        }
         e.preventDefault();
 
-        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
 
         const dx = clientX - startX;
         const dy = clientY - startY;
 
-        el.style.left = `${initialX + dx}px`;
-        el.style.top = `${initialY + dy}px`;
-        el.style.bottom = 'auto'; // Disable bottom constraint
+        const rect = el.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+
+        let newX = initialX + dx;
+        let newY = initialY + dy;
+
+        // Viewport boundary constraints
+        const minX = width / 2;
+        const maxX = window.innerWidth - width / 2;
+        newX = Math.max(minX, Math.min(maxX, newX));
+
+        const minY = 0;
+        const maxY = window.innerHeight - height;
+        newY = Math.max(minY, Math.min(maxY, newY));
+
+        el.style.left = `${newX}px`;
+        el.style.top = `${newY}px`;
+        el.style.bottom = "auto"; // Disable bottom constraint
     }
 
     function dragEnd() {
         isDragging = false;
-        document.removeEventListener('mousemove', dragMove);
-        document.removeEventListener('mouseup', dragEnd);
-        document.removeEventListener('touchmove', dragMove);
-        document.removeEventListener('touchend', dragEnd);
-        el.style.transition = 'background 0.3s, border 0.3s, box-shadow 0.3s';
+        document.removeEventListener("mousemove", dragMove);
+        document.removeEventListener("mouseup", dragEnd);
+        document.removeEventListener("touchmove", dragMove);
+        document.removeEventListener("touchend", dragEnd);
+        document.removeEventListener("touchcancel", dragEnd);
+        el.style.transition = "background 0.3s, border 0.3s, box-shadow 0.3s";
     }
 }
 
 function managePillBar() {
     if (window.innerWidth > 600) {
-        const container = document.getElementById('ytm-pill-container');
-        if (container) container.style.display = 'none';
+        const container = document.getElementById("ytm-pill-container");
+        if (container) {
+            container.style.display = "none";
+            // Restore native renderer to its original position in the DOM
+            if (originalParent) {
+                const renderer = container.querySelector("ytmusic-like-button-renderer");
+                if (renderer) {
+                    if (originalSibling && originalSibling.parentNode === originalParent) {
+                        originalParent.insertBefore(renderer, originalSibling);
+                    } else {
+                        originalParent.appendChild(renderer);
+                    }
+                }
+            }
+        }
         return;
     }
 
-    let container = document.getElementById('ytm-pill-container');
+    let container = document.getElementById("ytm-pill-container");
     if (!container) {
-        container = document.createElement('div');
-        container.id = 'ytm-pill-container';
+        container = document.createElement("div");
+        container.id = "ytm-pill-container";
         document.body.appendChild(container);
         initDraggable(container);
     }
-    container.style.display = 'flex';
+    container.style.display = "flex";
 
     // Move the native renderer into our container if it's not already there
-    // Use a more specific selector to avoid duplicates or finding the wrong one
-    const nativeRenderers = document.querySelectorAll('ytmusic-like-button-renderer');
-    
-    // We only want ONE renderer in the pill
-    if (nativeRenderers.length > 0) {
-        const primaryRenderer = nativeRenderers[0];
-        if (primaryRenderer.parentElement !== container) {
-            // Clean container to avoid duplicates shown in user screenshot
-            while (container.firstChild) {
-                container.removeChild(container.firstChild);
-            }
-            container.appendChild(primaryRenderer);
+    const nativeRenderers = document.querySelectorAll("ytmusic-like-button-renderer");
+
+    // Find the one that is NOT in the container (if any)
+    let primaryRenderer = null;
+    for (const renderer of nativeRenderers) {
+        if (renderer.parentElement !== container) {
+            primaryRenderer = renderer;
+            break;
         }
+    }
+
+    if (primaryRenderer) {
+        // Save original parent and next sibling to restore them later
+        originalParent = primaryRenderer.parentElement;
+        originalSibling = primaryRenderer.nextSibling;
+
+        // Clean container to avoid duplicates shown in user screenshot
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+        container.appendChild(primaryRenderer);
     }
 }
 
 function watchPlayerState() {
     if (window.innerWidth > 600) {
-        document.body.classList.remove('ytm-mini-safe');
-        document.body.classList.remove('ytm-mini-mode');
+        document.body.classList.remove("ytm-mini-safe");
+        document.body.classList.remove("ytm-mini-mode");
         return;
     }
 
-    document.body.classList.add('ytm-mini-mode');
+    document.body.classList.add("ytm-mini-mode");
 
-    const playerPage = document.querySelector('ytmusic-player-page');
-    const isExpanded = playerPage && window.getComputedStyle(playerPage).display !== 'none' && playerPage.offsetHeight > 100;
+    const playerPage = document.querySelector("ytmusic-player-page");
+    const isExpanded =
+        playerPage && window.getComputedStyle(playerPage).display !== "none" && playerPage.offsetHeight > 100;
 
     if (isExpanded) {
-        document.body.classList.remove('ytm-mini-safe');
+        document.body.classList.remove("ytm-mini-safe");
     } else {
-        document.body.classList.add('ytm-mini-safe');
+        document.body.classList.add("ytm-mini-safe");
     }
 }
 
 function createNavButtons() {
-    if (document.getElementById('ytm-mini-btn')) return;
+    if (document.getElementById("ytm-mini-btn")) {
+        return;
+    }
 
-    const navBarRight = document.querySelector('ytmusic-nav-bar .right-content');
-    if (!navBarRight) return;
+    const navBarRight = document.querySelector("ytmusic-nav-bar .right-content");
+    if (!navBarRight) {
+        return;
+    }
 
     // --- MAIN BUTTON ---
-    const mainBtn = document.createElement('button');
+    const mainBtn = document.createElement("button");
     mainBtn.id = "ytm-mini-btn";
     mainBtn.title = "Toggle Mini Player (Pop Out/In)";
-    
-    const iconImg = document.createElement('img');
-    iconImg.src = browser.runtime.getURL('icons/icon-48.png');
+
+    const iconImg = document.createElement("img");
+    iconImg.src = browser.runtime.getURL("icons/icon-48.png");
     iconImg.style.cssText = "width: 32px; height: 32px; display: block;";
-    
+
     mainBtn.appendChild(iconImg);
 
     mainBtn.style.cssText = `
@@ -233,10 +297,10 @@ function createNavButtons() {
         transition: background-color 0.2s;
     `;
 
-    mainBtn.onmouseover = () => mainBtn.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-    mainBtn.onmouseout = () => mainBtn.style.backgroundColor = "transparent";
+    mainBtn.onmouseover = () => (mainBtn.style.backgroundColor = "rgba(255, 255, 255, 0.1)");
+    mainBtn.onmouseout = () => (mainBtn.style.backgroundColor = "transparent");
 
-    mainBtn.addEventListener('click', (e) => {
+    mainBtn.addEventListener("click", (e) => {
         // Prevent event from bubbling up to YTM's own listeners
         e.preventDefault();
         e.stopPropagation();
@@ -244,7 +308,7 @@ function createNavButtons() {
         // Visual feedback
         mainBtn.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
         mainBtn.style.transform = "scale(0.9)";
-        
+
         setTimeout(() => {
             mainBtn.style.transform = "scale(1)";
             mainBtn.style.backgroundColor = "transparent";
@@ -253,10 +317,10 @@ function createNavButtons() {
         console.log("YTM Mini: Toggle button clicked");
 
         // Use fallback-safe messenger
-        const messenger = (typeof browser !== 'undefined') ? browser : chrome;
-        
+        const messenger = typeof browser !== "undefined" ? browser : chrome;
+
         try {
-            messenger.runtime.sendMessage({ action: "toggle_mini" }).catch(err => {
+            messenger.runtime.sendMessage({ action: "toggle_mini" }).catch((err) => {
                 console.error("YTM Mini: Failed to send message.", err);
             });
         } catch (err) {
@@ -265,12 +329,12 @@ function createNavButtons() {
     });
 
     // --- SUPPORT BUTTON ---
-    const supportBtn = document.createElement('a');
-    supportBtn.href = "https://www.buymeacoffee.com/kakeroth"; 
+    const supportBtn = document.createElement("a");
+    supportBtn.href = "https://www.buymeacoffee.com/kakeroth";
     supportBtn.target = "_blank";
-    supportBtn.innerText = "☕"; 
+    supportBtn.innerText = "☕";
     supportBtn.title = "Support development";
-    
+
     supportBtn.style.cssText = `
         background-color: #333333;
         color: white;
@@ -286,13 +350,13 @@ function createNavButtons() {
         display: inline-block;
         transition: background-color 0.2s;
     `;
-    
-    supportBtn.onmouseover = () => supportBtn.style.backgroundColor = "#4f4f4f";
-    supportBtn.onmouseout = () => supportBtn.style.backgroundColor = "#333333";
 
-    navBarRight.prepend(supportBtn); 
-    navBarRight.prepend(mainBtn);    
-    
+    supportBtn.onmouseover = () => (supportBtn.style.backgroundColor = "#4f4f4f");
+    supportBtn.onmouseout = () => (supportBtn.style.backgroundColor = "#333333");
+
+    navBarRight.prepend(supportBtn);
+    navBarRight.prepend(mainBtn);
+
     injectMiniCSS();
 }
 

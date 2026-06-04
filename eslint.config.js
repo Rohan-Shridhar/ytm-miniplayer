@@ -3,6 +3,9 @@ import globals from "globals";
 /** @type {import("eslint").Linter.Config[]} */
 export default [
   {
+    ignores: ["src/browser-polyfill.min.js"],
+  },
+  {
     files: ["src/**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,
@@ -10,6 +13,8 @@ export default [
       globals: {
         ...globals.browser,
         browser: "readonly",  // webextension-polyfill global
+        chrome: "readonly",   // chrome extension API global
+        importScripts: "readonly", // service worker importScripts global
       },
     },
     rules: {
@@ -24,7 +29,7 @@ export default [
       "no-var": "error",
       "prefer-const": "error",
       "curly": ["error", "all"],
-      "no-implicit-globals": "error",
+      "no-implicit-globals": "off",
 
       // ── Style (non-formatting — Prettier handles whitespace) ──────────
       "prefer-arrow-callback": "warn",

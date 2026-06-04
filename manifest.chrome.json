@@ -11,9 +11,7 @@
     "128": "icons/icon-128.png"
   },
   "permissions": [],
-  "host_permissions": [
-    "*://music.youtube.com/*"
-  ],
+  "host_permissions": ["*://music.youtube.com/*"],
   "background": {
     "service_worker": "background.js"
   },
@@ -25,8 +23,8 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": [ "icons/icon-48.png" ],
-      "matches": [ "*://music.youtube.com/*" ]
+      "resources": ["icons/icon-48.png"],
+      "matches": ["*://music.youtube.com/*"]
     }
   ]
 }
