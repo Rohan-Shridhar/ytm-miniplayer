@@ -132,7 +132,8 @@ feat(content): add keyboard shortcut to toggle mini player
 
 ### PR Description Template
 
-When you open a pull request, fill in the sections as described in [.github/pull_request_template.md](.github/pull_request_template.md).
+When you open a pull request, fill in the sections as described in
+[.github/pull_request_template.md](.github/pull_request_template.md).
 
 ### Branch Naming
 

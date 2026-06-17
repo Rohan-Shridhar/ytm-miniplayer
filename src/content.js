@@ -320,7 +320,47 @@ function createNavButtons() {
         const messenger = typeof browser !== "undefined" ? browser : chrome;
 
         try {
-            messenger.runtime.sendMessage({ action: "toggle_mini" }).catch((err) => {
+            const matchesStandalone = !window.toolbar.visible || window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(display-mode: minimal-ui)").matches;
+            let inMiniMode = false;
+            try {
+                inMiniMode = sessionStorage.getItem("ytm_in_mini_mode") === "true";
+            } catch {}
+
+            const isEntering = !inMiniMode;
+            const message = { action: "toggle_mini", matchesStandalone, isEntering };
+
+            if (isEntering) {
+                try {
+                    sessionStorage.setItem("ytm_in_mini_mode", "true");
+                    if (matchesStandalone) {
+                        const originalDimensions = {
+                            width: window.outerWidth,
+                            height: window.outerHeight,
+                            left: window.screenX,
+                            top: window.screenY,
+                            state: window.outerWidth >= window.screen.availWidth - 20 && window.outerHeight >= window.screen.availHeight - 20 ? "maximized" : "normal"
+                        };
+                        sessionStorage.setItem("ytm_original_dimensions", JSON.stringify(originalDimensions));
+                    }
+                } catch (err) {
+                    console.error("YTM Mini: Failed to save state to sessionStorage", err);
+                }
+            } else {
+                try {
+                    if (matchesStandalone) {
+                        const stored = sessionStorage.getItem("ytm_original_dimensions");
+                        if (stored) {
+                            message.originalDimensions = JSON.parse(stored);
+                        }
+                    }
+                    sessionStorage.removeItem("ytm_in_mini_mode");
+                    sessionStorage.removeItem("ytm_original_dimensions");
+                } catch (err) {
+                    console.error("YTM Mini: Failed to clear state/load dimensions", err);
+                }
+            }
+
+            messenger.runtime.sendMessage(message).catch((err) => {
                 console.error("YTM Mini: Failed to send message.", err);
             });
         } catch (err) {
